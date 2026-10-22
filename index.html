@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>循迹 FitLoop · 个人健康饮食与运动规划助手</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --line:#e4e8ef; --text:#1b2330; --muted:#6b7688;
+  --green:#16a34a; --green-bg:#e8f6ed;
+  --red:#dc2626;   --red-bg:#fdeaea;
+  --amber:#d97706; --amber-bg:#fdf1e0;
+  --brand:#0f766e; --brand-bg:#e3f4f2;
+  --purple:#6b5ce7;--purple-bg:#eeedfe;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  font-size:14px;line-height:1.6}
+.hidden{display:none !important}
+button{font-family:inherit;font-size:14px;cursor:pointer;border:none;border-radius:8px;padding:8px 14px}
+input,select{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;outline:none;background:#fff;color:var(--text)}
+input:focus{border-color:var(--brand)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+h1,h2,h3,h4{margin:0}
+.muted{color:var(--muted)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;background:var(--brand-bg);color:var(--brand)}
+.tag.g{background:var(--green-bg);color:var(--green)}
+.tag.r{background:var(--red-bg);color:var(--red)}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+.tag.p{background:var(--purple-bg);color:var(--purple)}
+
+/* ---------- 登录页 ---------- */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#0f766e,#134e4a);}
+.login-box{width:360px;background:#fff;border-radius:16px;padding:32px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.login-box h1{font-size:22px;margin-bottom:4px}
+.login-box input{width:100%;margin-top:14px}
+.login-box button{width:100%;margin-top:18px;background:var(--brand);color:#fff;padding:11px;font-weight:500}
+.tip{margin-top:16px;padding:10px 12px;background:#f4f6f9;border-radius:8px;font-size:12px;color:var(--muted);line-height:1.7}
+.err{color:var(--red);font-size:13px;margin-top:10px}
+
+/* ---------- 主框架 ---------- */
+header{background:#fff;border-bottom:1px solid var(--line);padding:12px 24px;display:flex;align-items:center;gap:12px}
+header .logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
+header .t{font-size:16px;font-weight:600}
+header .sp{flex:1}
+.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
+.btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+.btn-main{background:var(--brand);color:#fff}
+.layout{display:grid;grid-template-columns:250px 1fr;gap:16px;padding:16px 24px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+
+/* ---------- 侧栏 ---------- */
+.side{display:grid;gap:12px;position:sticky;top:16px}
+.av{display:flex;align-items:center;gap:10px}
+.av .face{width:38px;height:38px;border-radius:50%;background:var(--brand-bg);color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:600}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.kv span:last-child{color:var(--muted)}
+.daylist{display:grid;gap:6px}
+.dayitem{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px}
+.dayitem:hover{border-color:var(--brand)}
+.dayitem.on{border-color:var(--brand);background:var(--brand-bg);font-weight:500}
+.dayitem .dot{width:8px;height:8px;border-radius:50%}
+
+/* ---------- 主区 ---------- */
+main{display:grid;gap:16px}
+.sec-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.meal{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.meal:last-child{border-bottom:none}
+.meal .n{font-size:14px}
+.meal .k{font-size:13px;color:var(--muted);white-space:nowrap}
+.bar{height:10px;background:#eef1f5;border-radius:6px;overflow:hidden;margin-top:6px}
+.bar > i{display:block;height:100%;border-radius:6px;background:var(--brand);transition:width .5s}
+.pb{margin-bottom:14px}
+.pb .hd{display:flex;justify-content:space-between;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{padding:5px 10px;border:1px solid var(--line);border-radius:20px;background:#fff;font-size:12px;cursor:pointer}
+.chip:hover{border-color:var(--brand);color:var(--brand)}
+.eaten{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.review{margin-top:14px;padding:12px;border-radius:10px;font-size:13px}
+.review.ok{background:var(--green-bg)}
+.review.bad{background:var(--red-bg)}
+.review.warn{background:var(--amber-bg)}
+.adjust{margin-top:12px;border:1px solid var(--purple);background:var(--purple-bg);border-radius:10px;padding:12px}
+.adjust h4{font-size:14px;margin-bottom:6px;color:var(--purple)}
+.diff{display:flex;align-items:center;gap:10px;font-size:13px;margin-top:6px}
+.diff del{color:var(--muted)}
+.diff b{color:var(--purple)}
+.foot{padding:6px 24px 24px;font-size:12px;color:var(--muted)}
+svg{display:block;width:100%;height:auto}
+</style>
+</head>
+<body>
+
+<!-- ============ 登录页 ============ -->
+<div id="login">
+  <div class="login-box">
+    <h1>循迹 FitLoop</h1>
+    <div class="muted" style="font-size:13px">个人健康饮食 &amp; 运动规划助手</div>
+    <input id="u" placeholder="账号" value="test001">
+    <input id="p" type="password" placeholder="密码" value="123456">
+    <button onclick="doLogin()">登 录</button>
+    <div class="err hidden" id="err">账号或密码不正确</div>
+    <div class="tip">
+      测试账号：<b>test001</b><br>
+      密码：<b>123456</b><br>
+      权限：普通用户（仅查看与修改本人档案）<br>
+      有效期：2026-10-27 至 2026-11-27
+    </div>
+  </div>
+</div>
+
+<!-- ============ 主应用 ============ -->
+<div id="app" class="hidden">
+  <header>
+    <div class="logo">循</div>
+    <div class="t">循迹 FitLoop</div>
+    <span class="tag">持续跟踪 · 动态调整</span>
+    <div class="sp"></div>
+    <button class="btn-ghost" onclick="runDemo()">▶ 一键演示</button>
+    <button class="btn-main" onclick="logout()">退出</button>
+  </header>
+
+  <div class="layout">
+    <!-- 侧栏 -->
+    <aside class="side">
+      <div class="card">
+        <div class="av">
+          <div class="face">李</div>
+          <div>
+            <div style="font-weight:600">李同学</div>
+            <div class="muted" style="font-size:12px">减脂 · 第 <span id="dayno">7</span> 天</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:8px">我的档案</div>
+        <div class="kv"><span>身高 / 体重</span><span>172 cm / 70.0 kg</span></div>
+        <div class="kv"><span>BMI</span><span>23.7</span></div>
+        <div class="kv"><span>目标</span><span>8 周减 4 kg</span></div>
+        <div class="kv"><span>忌口</span><span>花生、海鲜</span></div>
+        <div class="kv"><span>可用食材</span><span>鸡胸肉、鸡蛋、西兰花</span></div>
+        <div class="kv"><span>可运动时间</span><span>每晚 30–40 分钟</span></div>
+      </div>
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:8px">健康档案状态</div>
+        <div class="kv"><span>累计热量偏差</span><span id="cum">-32 kcal</span></div>
+        <div class="kv"><span>方案被调整</span><span id="adjn">4 次</span></div>
+        <div class="kv"><span>打卡天数</span><span>7 / 7</span></div>
+      </div>
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:8px">7 天记录</div>
+        <div class="daylist" id="daylist"></div>
+      </div>
+    </aside>
+
+    <!-- 主区 -->
+    <main>
+      <!-- 今日方案 -->
+      <div class="card">
+        <div class="sec-title">今日方案 <span class="tag g" id="dlabel">D7</span> <span class="tag p" id="adjtag"></span></div>
+        <div class="grid2" style="margin-top:12px">
+          <div>
+            <div class="muted" style="font-size:13px;margin-bottom:2px">三餐安排</div>
+            <div id="meals"></div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:13px;margin-bottom:2px">运动安排</div>
+            <div id="exercise"></div>
+            <div class="muted" style="font-size:13px;margin:14px 0 2px">今日目标</div>
+            <div class="kv"><span>摄入热量</span><span id="tk">1700 kcal</span></div>
+            <div class="kv"><span>蛋白质</span><span id="tp">105 g</span></div>
+            <div class="kv"><span>计划消耗</span><span id="tb">300 kcal</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 打卡与复盘 -->
+      <div class="card">
+        <div class="sec-title">今日打卡 <span class="muted" style="font-weight:400;font-size:13px">记录吃了什么，方案会自动修正</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input id="food" style="flex:1" placeholder="例如：火锅（一顿）" onkeydown="if(event.key==='Enter')addFood()">
+          <button class="btn-main" onclick="addFood()">记录</button>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div style="margin-top:14px" id="eatenlist"></div>
+        <div class="grid2" style="margin-top:16px">
+          <div>
+            <div class="pb"><div class="hd"><span>热量摄入</span><span id="ktxt">1685 / 1700</span></div><div class="bar"><i id="kbar" style="background:var(--green)"></i></div></div>
+            <div class="pb"><div class="hd"><span>蛋白质</span><span id="ptxt">104 / 105 g</span></div><div class="bar"><i id="pbar" style="background:var(--brand)"></i></div></div>
+            <div class="pb"><div class="hd"><span>运动完成</span><span id="btxt">300 / 300 kcal</span></div><div class="bar"><i id="bbar" style="background:var(--amber)"></i></div></div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:13px;margin-bottom:6px">复盘结果</div>
+            <div id="review"></div>
+            <div id="adjustbox"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 趋势 -->
+      <div class="card">
+        <div class="sec-title">7 天趋势 <span class="muted" style="font-weight:400;font-size:13px">摄入目标 vs 实际摄入</span></div>
+        <div id="chart" style="margin-top:12px"></div>
+        <div class="muted" style="font-size:12px;margin-top:8px">
+          绿色 = 达标（±100 kcal 内）　橙色 = 轻微超支　红色 = 明显超支。虚线为当天的动态目标值，会随前一日偏差自动上下浮动。
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="foot">
+    免责声明：本工具提供的饮食与运动建议为一般性健康参考，<b>不构成医疗诊断或治疗方案</b>；有基础疾病或特殊情况请咨询专业医生。用户健康数据仅用于生成个性化方案，不向第三方提供，可随时删除。页面内容由 AI 生成并已作标识。
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   数据层（初赛演示用 Mock 数据）
+   ★★★ 接入 Coze 的替换点 ★★★
+   把 STORY 换成 Coze 工作流 / Bot 接口返回的 JSON 即可，
+   字段保持一致，下面的渲染代码一行都不用改。
+   建议接口返回格式：
+   { day, target, targetP, planBurn, meals:[{n,k}], ex:{n,k},
+     eaten:[{f,k}], burn, adjust }
+   ========================================================= */
+
+const PROFILE = {height:172, weight:70, goal:'lose', avoid:'花生、海鲜', foods:'鸡胸肉、鸡蛋、西兰花、番茄、牛奶', time:'每晚 30-40 分钟'};
+
+const FOODS = {
+  '火锅（一顿）':1200, '牛肉面（一碗）':520, '米饭（一碗）':200, '面条（一碗）':400,
+  '鸡蛋（一个）':80, '鸡胸肉（100g）':165, '牛奶（250ml）':130, '苹果（一个）':95,
+  '炸鸡（一份）':500, '奶茶（一杯）':350, '可乐（一罐）':140, '西兰花（100g）':35,
+  '番茄（一个）':30, '沙拉（一份）':180, '红薯（一个）':130, '酸奶（一杯）':120
+};
+
+function mealsFor(tk){
+  const r = tk/1800;
+  return [
+    {n:'燕麦牛奶（燕麦 40g + 牛奶 250ml）', k:Math.round(320*r)},
+    {n:'鸡胸肉沙拉 + 半碗米饭',              k:Math.round(520*r)},
+    {n:'番茄炒蛋 + 清炒西兰花 + 半碗米饭',    k:Math.round(480*r)},
+    {n:'加餐：苹果 + 无糖酸奶',               k:Math.round(215*r)}
+  ];
+}
+
+const STORY = [
+  {day:1, target:1800, targetP:110, planBurn:280, burn:280,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',520],['番茄炒蛋 + 清炒西兰花 + 半碗米饭',480],['加餐：苹果 + 无糖酸奶',215]],
+   protein:108, ex:'慢跑 30 分钟 + 拉伸', adjust:''},
+  {day:2, target:1800, targetP:110, planBurn:280, burn:120,
+   eaten:[['米饭（一碗）',200],['牛肉面（一碗）',520],['火锅（一顿）',1200],['可乐（一罐）',140],['奶茶（一杯）',350]],
+   protein:92, ex:'快走 15 分钟', adjust:''},
+  {day:3, target:1500, targetP:105, planBurn:380, burn:380,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',280],['鸡胸肉沙拉 + 半碗米饭',430],['清蒸西兰花 + 水煮蛋',300],['加餐：苹果',95],['无糖酸奶',120]],
+   protein:106, ex:'慢跑 40 分钟 + 力量训练 10 分钟',
+   adjust:'昨日热量超出 610 kcal，且蛋白质摄入不足 → 今日摄入目标下调至 1500 kcal，运动时长增加 15 分钟'},
+  {day:4, target:1650, targetP:105, planBurn:330, burn:330,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',300],['鸡胸肉沙拉 + 半碗米饭',480],['番茄炒蛋 + 清炒西兰花',430],['加餐：苹果 + 无糖酸奶',195],['红薯（一个）',130]],
+   protein:101, ex:'慢跑 35 分钟 + 拉伸',
+   adjust:'昨日达标 → 摄入目标回调 150 kcal，避免过度节食'},
+  {day:5, target:1700, targetP:105, planBurn:330, burn:260,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',310],['牛肉面（一碗）',520],['番茄炒蛋 + 半碗米饭',500],['加餐：奶茶（一杯）',350],['苹果（一个）',95]],
+   protein:96, ex:'快走 25 分钟', adjust:''},
+  {day:6, target:1620, targetP:102, planBurn:350, burn:350,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',295],['鸡胸肉沙拉 + 半碗米饭',470],['清蒸西兰花 + 水煮蛋 + 半碗米饭',420],['加餐：苹果',95],['无糖酸奶',120]],
+   protein:103, ex:'慢跑 40 分钟',
+   adjust:'昨日超支 110 kcal 且运动未完成 → 今日目标下调 80 kcal，晚餐主食减半'},
+  {day:7, target:1700, targetP:105, planBurn:300, burn:300,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',310],['鸡胸肉沙拉 + 半碗米饭',490],['番茄炒蛋 + 清炒西兰花 + 半碗米饭',465],['加餐：苹果 + 无糖酸奶',215],['牛奶（250ml）',130]],
+   protein:104, ex:'慢跑 30 分钟 + 拉伸',
+   adjust:'连续两日达标 → 目标回调 80 kcal，回到常规节奏'}
+];
+
+let cur = 7;           // 当前查看的天
+let added = {};        // 用户在界面上临时添加的食物
+
+/* ---------- 工具 ---------- */
+const sum = a => a.reduce((s,x)=>s+x[1],0);
+function dayData(d){
+  const s = STORY[d-1];
+  const eaten = s.eaten.concat(added[d] || []);
+  return Object.assign({}, s, {eaten, actual:sum(eaten)});
+}
+function login(){return document.getElementById('u').value==='test001' && document.getElementById('p').value==='123456';}
+function doLogin(){
+  if(login()){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');render();}
+  else{document.getElementById('err').classList.remove('hidden');}
+}
+function logout(){document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden');}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const s = dayData(cur);
+  document.getElementById('dayno').textContent = cur;
+
+  // 天列表
+  document.getElementById('daylist').innerHTML = STORY.map(s=>{
+    const dd = dayData(s.day);
+    const gap = dd.actual - dd.target;
+    const c = Math.abs(gap)<=100 ? 'var(--green)' : (gap>0 ? 'var(--red)' : 'var(--amber)');
+    return '<div class="dayitem'+(s.day===cur?' on':'')+'" onclick="go('+s.day+')">'+
+           '<span class="dot" style="background:'+c+'"></span>D'+s.day+
+           '<span style="flex:1"></span><span class="muted">'+dd.actual+'</span></div>';
+  }).join('');
+
+  // 方案
+  const meals = mealsFor(s.target);
+  document.getElementById('dlabel').textContent = 'D'+cur;
+  document.getElementById('adjtag').textContent = s.adjust ? '已根据昨日动态调整' : '';
+  document.getElementById('meals').innerHTML =
+    ['早餐','午餐','晚餐','加餐'].map((m,i)=>
+      '<div class="meal"><div><span class="tag">' + m + '</span> <span class="n">' + meals[i].n + '</span></div>'+
+      '<span class="k">' + meals[i].k + ' kcal</span></div>').join('');
+  document.getElementById('exercise').innerHTML =
+    '<div class="meal"><div><span class="tag a">运动</span> <span class="n">' + s.ex + '</span></div>'+
+    '<span class="k">' + s.planBurn + ' kcal</span></div>';
+  document.getElementById('tk').textContent = s.target + ' kcal';
+  document.getElementById('tp').textContent = s.targetP + ' g';
+  document.getElementById('tb').textContent = s.planBurn + ' kcal';
+
+  // 进度条
+  const kr = Math.min(s.actual/s.target, 1.35);
+  const pr = Math.min(s.protein/s.targetP, 1.35);
+  const br = Math.min(s.burn/s.planBurn, 1);
+  document.getElementById('ktxt').textContent = s.actual + ' / ' + s.target + ' kcal' +
+    (s.actual>s.target ? '（超 ' + (s.actual-s.target) + '）' : '');
+  document.getElementById('kbar').style.width = Math.min(kr,1)*100 + '%';
+  document.getElementById('kbar').style.background = s.actual<=s.target ? 'var(--green)' : (s.actual-s.target>300 ? 'var(--red)' : 'var(--amber)');
+  document.getElementById('ptxt').textContent = s.protein + ' / ' + s.targetP + ' g';
+  document.getElementById('pbar').style.width = Math.min(pr,1)*100 + '%';
+  document.getElementById('btxt').textContent = s.burn + ' / ' + s.planBurn + ' kcal';
+  document.getElementById('bbar').style.width = br*100 + '%';
+
+  // 已吃列表
+  document.getElementById('eatenlist').innerHTML = s.eaten.length
+    ? s.eaten.map(e=>'<div class="eaten"><span>'+e[0]+'</span><span class="muted">'+e[1]+' kcal</span></div>').join('')
+    : '<div class="muted" style="font-size:13px">还没有记录，试试点上面的食物或在输入框里输入。</div>';
+
+  // 复盘
+  const gap = s.actual - s.target;
+  const pgap = s.protein - s.targetP;
+  let cls = 'ok', head, body;
+  if(Math.abs(gap)<=100 && pgap>=-5 && s.burn>=s.planBurn){cls='ok';head='今日达标';body='热量、蛋白质和运动都完成了，明天维持当前节奏。';}
+  else{
+    cls = gap>300 ? 'bad' : 'warn';
+    head = gap>0 ? '今日超支 ' + gap + ' kcal' : '今日盈余 ' + Math.abs(gap) + ' kcal';
+    body = [];
+    if(gap>0) body.push('摄入比目标多 ' + gap + ' kcal');
+    if(gap<0) body.push('摄入比目标少 ' + Math.abs(gap) + ' kcal');
+    if(pgap<0) body.push('蛋白质差 ' + Math.abs(pgap) + ' g');
+    if(s.burn<s.planBurn) body.push('运动少完成 ' + (s.planBurn-s.burn) + ' kcal');
+    body = body.join('，') + '。已据此重算明天的方案。';
+  }
+  document.getElementById('review').innerHTML =
+    '<div class="review '+cls+'"><b>'+head+'</b><br>'+body+'</div>';
+
+  // 明日的调整（核心亮点）
+  const nx = STORY[cur] ; // 下一天
+  document.getElementById('adjustbox').innerHTML = nx ? (
+    '<div class="adjust"><h4>明日方案已自动调整</h4>'+
+    '<div style="font-size:13px">'+nx.adjust+'</div>'+
+    '<div class="diff"><del>摄入 ' + s.target + ' kcal</del> → <b>' + nx.target + ' kcal</b></div>'+
+    '<div class="diff"><del>运动 ' + s.planBurn + ' kcal</del> → <b>' + nx.planBurn + ' kcal</b></div>'+
+    '<div class="muted" style="font-size:12px;margin-top:6px">规则：超支 &gt; 300 → 次日目标下调，并增加运动；连续两日达标 → 目标回调，避免过度节食。</div></div>'
+  ) : '';
+
+  // 档案统计
+  let cum=0, n=0;
+  STORY.forEach(x=>{const dd=dayData(x.day);cum += dd.actual-(x.target);if(x.adjust)n++;});
+  document.getElementById('cum').textContent = (cum>0?'+':'') + cum + ' kcal';
+  document.getElementById('adjn').textContent = n + ' 次';
+
+  renderChips();
+  renderChart();
+}
+
+function renderChips(){
+  const keys = Object.keys(FOODS).slice(0,10);
+  document.getElementById('chips').innerHTML =
+    keys.map(k=>'<span class="chip" onclick="quick(\''+k+'\')">'+k+'</span>').join('');
+}
+
+function go(d){cur=d;render();}
+
+function addFood(){
+  const el = document.getElementById('food');
+  const v = (el.value||'').trim();
+  if(!v) return;
+  quick(v);
+  el.value='';
+}
+function quick(name){
+  let k = FOODS[name];
+  if(!k){
+    // 模糊匹配，找不到就按 300 kcal 估算
+    const hit = Object.keys(FOODS).find(f=>name.includes(f.slice(0,2)) || f.includes(name));
+    k = hit ? FOODS[hit] : 300;
+  }
+  (added[cur] = added[cur] || []).push([name,k]);
+  render();
+}
+
+/* ---------- 手写 SVG 图表（无外部依赖，断网可用） ---------- */
+function renderChart(){
+  const W=640,H=250,PL=46,PR=16,PT=16,PB=34;
+  const iw=W-PL-PR, ih=H-PT-PB;
+  const max=2600, gw=iw/7;
+  let g='';
+  // 网格
+  for(let v=0;v<=max;v+=500){
+    const y=PT+ih-(v/max)*ih;
+    g += '<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="#e4e8ef" stroke-width="1"/>';
+    g += '<text x="'+(PL-8)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#6b7688">'+v+'</text>';
+  }
+  STORY.forEach((s,i)=>{
+    const dd=dayData(s.day);
+    const x0=PL+i*gw;
+    const bw=gw*0.26;
+    const h1=(s.target/max)*ih, h2=(dd.actual/max)*ih;
+    const gap=dd.actual-s.target;
+    const c=Math.abs(gap)<=100?'#16a34a':(gap>0?'#dc2626':'#d97706');
+    // 目标（描边柱）
+    g += '<rect x="'+(x0+gw*0.18)+'" y="'+(PT+ih-h1)+'" width="'+bw+'" height="'+h1+'" rx="3" fill="none" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="3 2"/>';
+    // 实际（实心柱）
+    g += '<rect x="'+(x0+gw*0.48)+'" y="'+(PT+ih-h2)+'" width="'+bw+'" height="'+h2+'" rx="3" fill="'+c+'"/>';
+    g += '<text x="'+(x0+gw/2)+'" y="'+(H-12)+'" text-anchor="middle" font-size="11" fill="#6b7688">D'+s.day+'</text>';
+    g += '<text x="'+(x0+gw*0.61)+'" y="'+(PT+ih-h2-6)+'" text-anchor="middle" font-size="11" fill="'+c+'">'+dd.actual+'</text>';
+  });
+  g += '<rect x="'+PL+'" y="'+(H-30)+'" width="12" height="10" rx="2" fill="none" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="3 2"/>';
+  g += '<text x="'+(PL+18)+'" y="'+(H-21)+'" font-size="11" fill="#6b7688">目标摄入</text>';
+  g += '<rect x="'+(PL+90)+'" y="'+(H-30)+'" width="12" height="10" rx="2" fill="#16a34a"/>';
+  g += '<text x="'+(PL+108)+'" y="'+(H-21)+'" font-size="11" fill="#6b7688">实际摄入（绿=达标 / 橙=轻微超支 / 红=明显超支）</text>';
+  document.getElementById('chart').innerHTML =
+    '<svg viewBox="0 0 '+W+' '+H+'">'+g+'</svg>';
+}
+
+/* ---------- 一键演示：现场讲述用 ---------- */
+let demoTimer=null;
+function runDemo(){
+  clearTimeout(demoTimer);
+  const steps=[];
+  added={};
+  steps.push(()=>{go(1);flash('第 1 天：建档 → 生成方案，正常执行');});
+  steps.push(()=>{go(2);flash('第 2 天：晚上和朋友吃了火锅…');});
+  steps.push(()=>{quick('火锅（一顿）');flash('打卡：火锅（一顿）1200 kcal');});
+  steps.push(()=>{quick('奶茶（一杯）');flash('再记一杯奶茶 → 当日超支，触发复盘');});
+  steps.push(()=>{go(3);flash('第 3 天：方案已被自动下调 300 kcal，运动 +15 分钟');});
+  steps.push(()=>{go(7);flash('7 天后：热量偏差从 +610 收敛到 -32 kcal');});
+  steps.forEach((fn,i)=>demoTimer=setTimeout(fn, i*1600));
+}
+function flash(t){
+  let b=document.getElementById('toast');
+  if(!b){b=document.createElement('div');b.id='toast';
+    b.style.cssText='position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:#1b2330;color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.3)';
+    document.body.appendChild(b);}
+  b.textContent=t;b.style.opacity='1';
+  clearTimeout(b._t);b._t=setTimeout(()=>{b.style.transition='opacity .4s';b.style.opacity='0';},1500);
+}
+</script>
+</body>
+</html>
