@@ -90,6 +90,24 @@ main{display:grid;gap:16px}
 .diff del{color:var(--muted)}
 .diff b{color:var(--purple)}
 .foot{padding:6px 24px 24px;font-size:12px;color:var(--muted)}
+#chatbtn{position:fixed;right:24px;bottom:24px;width:56px;height:56px;border-radius:50%;
+  background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;cursor:pointer;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+#chatbtn:hover{opacity:.9}
+#chatbox{position:fixed;right:24px;bottom:92px;width:340px;background:#fff;
+  border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);
+  display:flex;flex-direction:column;z-index:60;overflow:hidden}
+.ch-head{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.ch-face{width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.ch-close{cursor:pointer;color:var(--muted);font-size:12px}
+#chatlog{flex:1;overflow:auto;padding:12px;font-size:13px;line-height:1.6;height:240px}
+.ch-input{padding:10px;border-top:1px solid var(--line);display:flex;gap:6px}
+.ch-input input{flex:1}
+.msg{margin-bottom:10px;padding:8px 10px;border-radius:10px;max-width:86%;clear:both;white-space:pre-wrap}
+.msg.me{background:var(--brand);color:#fff;float:right}
+.msg.ai{background:#f1f3f7;float:left}
+@media (max-width:520px){#chatbox{right:12px;left:12px;width:auto}}
 svg{display:block;width:100%;height:auto}
 </style>
 </head>
@@ -120,9 +138,22 @@ svg{display:block;width:100%;height:auto}
     <div class="t">循迹 FitLoop</div>
     <span class="tag">持续跟踪 · 动态调整</span>
     <div class="sp"></div>
+    <button class="btn-ghost" onclick="toggleImport()">导入 Coze 结果</button>
     <button class="btn-ghost" onclick="runDemo()">▶ 一键演示</button>
     <button class="btn-main" onclick="logout()">退出</button>
   </header>
+
+  <div id="importbox" class="hidden" style="padding:12px 24px;background:#fff;border-bottom:1px solid var(--line)">
+    <div style="font-size:13px;margin-bottom:6px">把 Coze 工作流跑出来的 JSON 粘贴到这里，点「应用」即可替换页面数据。</div>
+    <textarea id="importtxt" rows="6" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder='[{"day":1,"target":1800,"targetP":110,"planBurn":280,"burn":280,"protein":108,"eaten":[["燕麦牛奶",320]],"ex":"慢跑 30 分钟","adjust":"","meals":null}]'></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn-main" onclick="doImport()">应用</button>
+      <button class="btn-ghost" onclick="toggleImport()">收起</button>
+      <button class="btn-ghost" onclick="syncFromCoze()">从 Coze 同步</button>
+      <button class="btn-ghost" onclick="location.reload()">恢复默认数据</button>
+      <span class="muted" style="font-size:12px">Coze 工作流一次通常只产出<b>一天</b>：只给一天 → 自动替换对应的那一天，其余保留；给 7 天数组 → 整体替换。</span>
+    </div>
+  </div>
 
   <div class="layout">
     <!-- 侧栏 -->
@@ -212,10 +243,37 @@ svg{display:block;width:100%;height:auto}
     </main>
   </div>
 
+  <!-- ============ 对话气泡（前端自带，不依赖 Coze，断网也能用）============ -->
+  <div id="chatbtn" onclick="toggleChat()" title="跟助手说句话">AI</div>
+  <div id="chatbox" class="hidden">
+    <div class="ch-head">
+      <div class="ch-face">AI</div>
+      <div style="font-size:14px;font-weight:600">循迹助手</div>
+      <span style="flex:1"></span>
+      <span class="ch-close" onclick="toggleChat()">收起</span>
+    </div>
+    <div id="chatlog"></div>
+    <div class="ch-input">
+      <input id="chatinput" placeholder="说说你吃了什么…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="btn-main" onclick="sendChat()">发送</button>
+    </div>
+  </div>
+
   <div class="foot">
     免责声明：本工具提供的饮食与运动建议为一般性健康参考，<b>不构成医疗诊断或治疗方案</b>；有基础疾病或特殊情况请咨询专业医生。用户健康数据仅用于生成个性化方案，不向第三方提供，可随时删除。页面内容由 AI 生成并已作标识。
   </div>
 </div>
+
+<!-- ============================================================
+     接入 Coze 对话窗的位置（C 拿到 botId 后填这里）
+     步骤：
+     1. 扣子后台 → 发布 → 选「Web SDK / 网页嵌入」→ 用悬浮气泡模式
+     2. 复制它自动生成的一段 <script>，粘贴在下面两行注释的下方
+     3. 分工：对话窗负责「输入」，主界面卡片区负责「展示」
+     4. 现场网络异常时，把这段删掉或注释掉，页面功能不受影响
+     ============================================================ -->
+<!-- <script src="扣子后台给你的 SDK 地址"></script> -->
+<!-- <script>new CozeWebSDK.WebChatClient({ config:{ botId:'你的 botId' } });</script> -->
 
 <script>
 /* =========================================================
@@ -240,39 +298,42 @@ const FOODS = {
 function mealsFor(tk){
   const r = tk/1800;
   return [
-    {n:'燕麦牛奶（燕麦 40g + 牛奶 250ml）', k:Math.round(320*r)},
-    {n:'鸡胸肉沙拉 + 半碗米饭',              k:Math.round(520*r)},
-    {n:'番茄炒蛋 + 清炒西兰花 + 半碗米饭',    k:Math.round(480*r)},
-    {n:'加餐：苹果 + 无糖酸奶',               k:Math.round(215*r)}
+    {name:'燕麦牛奶（燕麦 40g + 牛奶 250ml）', kcal:Math.round(320*r)},
+    {name:'鸡胸肉沙拉 + 半碗米饭',              kcal:Math.round(520*r)},
+    {name:'番茄炒蛋 + 清炒西兰花 + 半碗米饭',    kcal:Math.round(480*r)},
+    {name:'加餐：苹果 + 无糖酸奶',               kcal:Math.round(215*r)}
   ];
 }
 
+/* 下面这 7 天是「按复盘规则逐日推演」出来的标准数据，与 Coze 代码节点完全一致。
+   用户设定：男 / 172cm / 70kg / 20 岁 → BMR 1680，TDEE 2310，安全下限 1428 */
 const STORY = [
   {day:1, target:1800, targetP:110, planBurn:280, burn:280,
-   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',520],['番茄炒蛋 + 清炒西兰花 + 半碗米饭',480],['加餐：苹果 + 无糖酸奶',215]],
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',520],['番茄炒蛋 + 清炒西兰花 + 半碗米饭',480],['加餐：苹果 + 无糖酸奶',215],['牛奶（250ml）',130],['苹果（一个）',95]],
    protein:108, ex:'慢跑 30 分钟 + 拉伸', adjust:''},
   {day:2, target:1800, targetP:110, planBurn:280, burn:120,
    eaten:[['米饭（一碗）',200],['牛肉面（一碗）',520],['火锅（一顿）',1200],['可乐（一罐）',140],['奶茶（一杯）',350]],
    protein:92, ex:'快走 15 分钟', adjust:''},
-  {day:3, target:1500, targetP:105, planBurn:380, burn:380,
-   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',280],['鸡胸肉沙拉 + 半碗米饭',430],['清蒸西兰花 + 水煮蛋',300],['加餐：苹果',95],['无糖酸奶',120]],
+  {day:3, target:1500, targetP:120, planBurn:380, burn:380,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',480],['清蒸西兰花 + 水煮蛋',330],['加餐：苹果 + 无糖酸奶',215],['红薯（一个）',130]],
    protein:106, ex:'慢跑 40 分钟 + 力量训练 10 分钟',
-   adjust:'昨日热量超出 610 kcal，且蛋白质摄入不足 → 今日摄入目标下调至 1500 kcal，运动时长增加 15 分钟'},
-  {day:4, target:1650, targetP:105, planBurn:330, burn:330,
-   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',300],['鸡胸肉沙拉 + 半碗米饭',480],['番茄炒蛋 + 清炒西兰花',430],['加餐：苹果 + 无糖酸奶',195],['红薯（一个）',130]],
-   protein:101, ex:'慢跑 35 分钟 + 拉伸',
-   adjust:'昨日达标 → 摄入目标回调 150 kcal，避免过度节食'},
-  {day:5, target:1700, targetP:105, planBurn:330, burn:260,
-   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',310],['牛肉面（一碗）',520],['番茄炒蛋 + 半碗米饭',500],['加餐：奶茶（一杯）',350],['苹果（一个）',95]],
-   protein:96, ex:'快走 25 分钟', adjust:''},
-  {day:6, target:1620, targetP:102, planBurn:350, burn:350,
-   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',295],['鸡胸肉沙拉 + 半碗米饭',470],['清蒸西兰花 + 水煮蛋 + 半碗米饭',420],['加餐：苹果',95],['无糖酸奶',120]],
-   protein:103, ex:'慢跑 40 分钟',
-   adjust:'昨日超支 110 kcal 且运动未完成 → 今日目标下调 80 kcal，晚餐主食减半'},
-  {day:7, target:1700, targetP:105, planBurn:300, burn:300,
-   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',310],['鸡胸肉沙拉 + 半碗米饭',490],['番茄炒蛋 + 清炒西兰花 + 半碗米饭',465],['加餐：苹果 + 无糖酸奶',215],['牛奶（250ml）',130]],
-   protein:104, ex:'慢跑 30 分钟 + 拉伸',
-   adjust:'连续两日达标 → 目标回调 80 kcal，回到常规节奏'}
+   adjust:'昨日热量超出 610 kcal 且蛋白质摄入不足，今日摄入目标下调 300 kcal 至 1500，运动消耗增加 100 kcal，并在菜单中补充优质蛋白。'},
+  {day:4, target:1500, targetP:130, planBurn:380, burn:380,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',470],['番茄炒蛋 + 清炒西兰花',395],['加餐：苹果 + 无糖酸奶',215],['鸡蛋（一个）',80]],
+   protein:126, ex:'慢跑 40 分钟 + 拉伸',
+   adjust:'昨日达标，今日维持当前摄入目标，继续保持。'},
+  {day:5, target:1580, targetP:130, planBurn:380, burn:380,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['牛肉面（一碗）',520],['番茄炒蛋 + 半碗米饭',450],['加餐：苹果 + 无糖酸奶',215],['牛奶（250ml）',130]],
+   protein:128, ex:'慢跑 40 分钟 + 力量训练 10 分钟',
+   adjust:'连续两日达标，今日摄入目标回调 80 kcal 至 1580，避免过度节食。'},
+  {day:6, target:1660, targetP:130, planBurn:380, burn:380,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',490],['清蒸西兰花 + 水煮蛋 + 半碗米饭',430],['加餐：苹果',95],['无糖酸奶',120],['红薯（一个）',130],['鸡蛋（一个）',80]],
+   protein:132, ex:'慢跑 40 分钟 + 力量训练 10 分钟',
+   adjust:'连续两日达标，今日摄入目标回调 80 kcal 至 1660，逐步回到常规节奏。'},
+  {day:7, target:1740, targetP:130, planBurn:380, burn:380,
+   eaten:[['燕麦牛奶（燕麦 40g + 牛奶 250ml）',320],['鸡胸肉沙拉 + 半碗米饭',510],['番茄炒蛋 + 清炒西兰花 + 半碗米饭',465],['加餐：苹果 + 无糖酸奶',215],['牛奶（250ml）',130],['红薯（一个）',130],['番茄（一个）',30]],
+   protein:130, ex:'慢跑 40 分钟 + 拉伸',
+   adjust:'连续两日达标，今日摄入目标回调 80 kcal 至 1740，已回到常规减脂节奏。'}
 ];
 
 let cur = 7;           // 当前查看的天
@@ -308,13 +369,13 @@ function render(){
   }).join('');
 
   // 方案
-  const meals = mealsFor(s.target);
+  const meals = s.meals || mealsFor(s.target);
   document.getElementById('dlabel').textContent = 'D'+cur;
   document.getElementById('adjtag').textContent = s.adjust ? '已根据昨日动态调整' : '';
   document.getElementById('meals').innerHTML =
     ['早餐','午餐','晚餐','加餐'].map((m,i)=>
-      '<div class="meal"><div><span class="tag">' + m + '</span> <span class="n">' + meals[i].n + '</span></div>'+
-      '<span class="k">' + meals[i].k + ' kcal</span></div>').join('');
+      '<div class="meal"><div><span class="tag">' + (meals[i].type || m) + '</span> <span class="n">' + meals[i].name + '</span></div>'+
+      '<span class="k">' + meals[i].kcal + ' kcal</span></div>').join('');
   document.getElementById('exercise').innerHTML =
     '<div class="meal"><div><span class="tag a">运动</span> <span class="n">' + s.ex + '</span></div>'+
     '<span class="k">' + s.planBurn + ' kcal</span></div>';
@@ -404,6 +465,125 @@ function quick(name){
   render();
 }
 
+/* =========================================================
+   与 Coze 的唯一耦合点：applyPlan()
+   不管数据来自粘贴、API 还是 Web SDK，最终都走这一个函数。
+   C 只要产出《Coze与前端联调执行手册》第 1 节格式的 JSON 即可。
+   ========================================================= */
+/* ⚠️ 令牌 PAT 永远不要写在这里 —— 它只配在 Vercel 环境变量（COZE_PAT）。
+   写进前端 = 任何人按 F12 都能看到。 */
+let COZE_WF_ID  = '';   // 工作流 ID。留空则用服务端环境变量 COZE_WF_ID
+let COZE_PARAMS = {};   // 传给工作流的参数。C 要什么就填什么，例：{ action: 'daily_plan' }
+/* 代理地址：
+   · 部署在 Vercel（前后端一起）→ 留空，走同源 /api/coze
+   · 部署在 GitHub Pages（纯静态，跑不了 api 函数）→ 填另一个 Vercel 项目的完整地址，
+     例：'https://fitloop-api.vercel.app/api/coze'
+   ★ 不管哪种，用「粘贴 + 应用」都能达到一样的演示效果，API 只是锦上添花 */
+let COZE_API = '';
+
+function normalizePlan(raw){
+  // 1) 字符串先解析
+  if(typeof raw === 'string'){
+    const s = raw.trim();
+    if(!s) throw new Error('内容为空');
+    try{ raw = JSON.parse(s); }
+    catch(e){ throw new Error('不是合法 JSON。常见原因：只复制了一半、或混进了中文说明文字'); }
+  }
+  // 2) Coze 常见包裹层：data / output / result，可能是「对象」也可能是「JSON 字符串」
+  ['data','output','result'].forEach(function(k){
+    if(raw && raw[k] && typeof raw[k] === 'string'){
+      try{ raw = JSON.parse(raw[k]); }catch(e){ /* 不是 JSON 就跳过 */ }
+    }
+  });
+  // 3) 取数组
+  let arr = Array.isArray(raw) ? raw : null;
+  if(!arr && raw){
+    ['data','output','result','items','days'].forEach(function(k){
+      if(!arr && Array.isArray(raw[k])) arr = raw[k];
+    });
+  }
+  // 4) 还是取不到 → 当成「单天」处理（Coze 工作流一次通常只产出一天）
+  if(!arr && raw) arr = [raw];
+  return arr.map(function(d, i){
+    const eaten = d.eaten || d.items || [];
+    return {
+      day:      d.day || (i + 1),
+      target:   Number(d.target   || d.nextTarget  || 1800),
+      targetP:  Number(d.targetP  || d.nextTargetP || 110),
+      planBurn: Number(d.planBurn || d.nextBurn    || 280),
+      burn:     Number((d.burn != null ? d.burn : (d.planBurn || d.nextBurn || 280))),
+      protein:  Number(d.protein || 0),
+      eaten:    eaten.map(function(x){
+        return Array.isArray(x) ? [String(x[0]), Number(x[1])] : [String(x.name || ''), Number(x.kcal || 0)];
+      }),
+      ex:     d.ex || '',
+      adjust: d.adjust || '',
+      meals:  d.meals || null
+    };
+  });
+}
+
+function applyPlan(raw){
+  let data;
+  try{
+    data = normalizePlan(raw);
+    if(!data.length) throw new Error('没有解析到任何一天的数据');
+    if(isNaN(data[0].target)) throw new Error('没找到 target 字段（或不是数字）。\nCoze 工作流每次通常只产出「一天」，请确认输出里有 target / targetP / planBurn 这几个字段。');
+  }catch(e){
+    alert('导入失败：' + e.message + '\n\n正确格式形如：\n[{"day":1,"target":1800,"targetP":110,"planBurn":280,"eaten":[["火锅",1200]],"ex":"慢跑","adjust":""}]\n\n也可以只给一天的对象，会自动替换对应的那一天。');
+    return;
+  }
+
+  if(data.length === 1){
+    // 单天：替换对应那一天，其余 7 天保留（Coze 工作流一次只算一天，这是正常的）
+    const d0 = data[0];
+    let idx = (d0.day >= 1 && d0.day <= STORY.length) ? (d0.day - 1) : (cur - 1);
+    d0.day = idx + 1;
+    STORY[idx] = d0;
+    added = {};
+    cur = idx + 1;
+    render();
+    flash('已导入到 D' + (idx + 1) + '（其余天数据保留）');
+  }else{
+    // 多天：整体替换
+    STORY.length = 0;
+    data.forEach(function(x){ STORY.push(x); });
+    added = {};
+    cur = Math.min(cur, STORY.length);
+    render();
+    flash('已导入 ' + data.length + ' 天方案');
+  }
+}
+
+function toggleImport(){
+  document.getElementById('importbox').classList.toggle('hidden');
+}
+function doImport(){
+  const v = document.getElementById('importtxt').value.trim();
+  if(!v){ alert('请先粘贴 JSON'); return; }
+  applyPlan(v);
+}
+
+async function syncFromCoze(){
+  try{
+    // 走自建代理：解决跨域，且 token 只存在服务端
+    const res = await fetch(COZE_API || '/api/coze', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ workflow_id: COZE_WF_ID, parameters: COZE_PARAMS })
+    });
+    const j = await res.json();
+    if(j.error){
+      // workflow_id 允许前端留空（改用 Vercel 环境变量），所以这里不拦，交给服务端判断
+      throw new Error(j.error);
+    }
+    if(j.debug_url) console.log('Coze 调试链接：' + j.debug_url);
+    applyPlan(j.data);   // data 是结束节点输出的字符串，applyPlan 会自动 parse
+  }catch(e){
+    alert('同步失败：' + e.message + '\n\n排查顺序：\n1. Vercel 配了 COZE_PAT 吗\n2. 工作流发布了吗\n3. 含数据库节点的话配 COZE_BOT_ID 了吗\n\n搞不定就用上面的「粘贴 + 应用」，演示效果完全一样。');
+  }
+}
+
 /* ---------- 手写 SVG 图表（无外部依赖，断网可用） ---------- */
 function renderChart(){
   const W=640,H=250,PL=46,PR=16,PT=16,PB=34;
@@ -438,6 +618,60 @@ function renderChart(){
     '<svg viewBox="0 0 '+W+' '+H+'">'+g+'</svg>';
 }
 
+/* =========================================================
+   对话气泡：前端自带的打卡入口，不依赖 Coze、断网也能用
+   用户在气泡里说一句话 → 解析出食物 → 真的写进今天的记录
+   → 左边的进度条 / 复盘 / 明日方案全部实时变化（真联动，不是摆设）
+   ========================================================= */
+function toggleChat(){
+  const box = document.getElementById('chatbox');
+  box.classList.toggle('hidden');
+  if(!box.classList.contains('hidden')){
+    const log = document.getElementById('chatlog');
+    if(!log.innerHTML) pushMsg('ai','你好！今天吃了什么、动了多少，直接跟我说就行。我帮你记账，并自动调整明天的方案。');
+    document.getElementById('chatinput').focus();
+  }
+}
+function pushMsg(who, text){
+  const log = document.getElementById('chatlog');
+  const d = document.createElement('div');
+  d.className = 'msg ' + who;
+  d.textContent = text;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+function sendChat(){
+  const el = document.getElementById('chatinput');
+  const v = (el.value || '').trim();
+  if(!v) return;
+  pushMsg('me', v);
+  el.value = '';
+  setTimeout(function(){ replyChat(v); }, 320);
+}
+function replyChat(text){
+  const hits = [];
+  // 在用户的话里找食物（去掉括号里的份量再比对，命中率更高）
+  Object.keys(FOODS).forEach(function(f){
+    const key = f.replace(/（[^）]*）/g, '');
+    if(key && text.indexOf(key) > -1) hits.push([f, FOODS[f]]);
+  });
+  if(!hits.length){
+    pushMsg('ai','没太听清，能说具体一点吗？比如「吃了一碗牛肉面」「喝了一杯奶茶」「跑了 30 分钟」。');
+    return;
+  }
+  hits.forEach(function(h){ (added[cur] = added[cur] || []).push(h); });
+  render();                                   // 关键：左边卡片、进度条、明日方案全部刷新
+  const s = dayData(cur);
+  const gap = s.actual - s.target;
+  let msg = '已记录：' + hits.map(function(h){ return h[0] + ' ' + h[1] + ' kcal'; }).join('、') + '\n';
+  msg += '今日累计 ' + s.actual + ' / ' + s.target + ' kcal';
+  if(gap > 300)      msg += '，超出 ' + gap + ' kcal —— 明天的方案已自动下调，请看左侧调整卡片。';
+  else if(gap > 100) msg += '，略超 ' + gap + ' kcal —— 明天会小幅调整。';
+  else if(gap >= -100) msg += '，基本达标，继续保持。';
+  else msg += '，低于目标 ' + Math.abs(gap) + ' kcal，明天会适当上调。';
+  pushMsg('ai', msg);
+}
+
 /* ---------- 一键演示：现场讲述用 ---------- */
 let demoTimer=null;
 function runDemo(){
@@ -449,7 +683,7 @@ function runDemo(){
   steps.push(()=>{quick('火锅（一顿）');flash('打卡：火锅（一顿）1200 kcal');});
   steps.push(()=>{quick('奶茶（一杯）');flash('再记一杯奶茶 → 当日超支，触发复盘');});
   steps.push(()=>{go(3);flash('第 3 天：方案已被自动下调 300 kcal，运动 +15 分钟');});
-  steps.push(()=>{go(7);flash('7 天后：热量偏差从 +610 收敛到 -32 kcal');});
+  steps.push(()=>{go(7);flash('7 天后：日均热量偏差从 +285 kcal 收敛到 +15 kcal');});
   steps.forEach((fn,i)=>demoTimer=setTimeout(fn, i*1600));
 }
 function flash(t){
